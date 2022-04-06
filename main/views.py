@@ -1,8 +1,11 @@
+from django.db.models import Q
 from django.shortcuts import render
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
 # from rest_framework.views import APIView
-from rest_framework import generics
+from rest_framework import generics, viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from main.models import Category, Post, PostImage
 from .serializers import CategorySerializer, PostSerializer, PostImageSerializer
@@ -34,32 +37,46 @@ from main.models import Category, Post
 from main.serializers import CategorySerializer, PostSerializer
 
 
+# class PostView(generics.ListCreateAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostSerializer
+#
+#
+# class PostDetailView(generics.RetrieveAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostSerializer
+#
+#
+# class PostUpdateView(generics.UpdateAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostSerializer
+#
+#
+# class PostDeleteView(generics.DestroyAPIView):
+#     queryset = Post.objects.all()
+#     serializer_class = PostSerializer
+
 class CategoryListView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class PostView(generics.ListCreateAPIView):
+class PostsViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+                                              # router builds path posts/search/?q=paris
+    @action(detail=False, methods=['get'])    # actiony dostupny tolko cherez viewsetah
+    def search(self, request, pk=None):       # request.GET.get('q') - > {'q': {'paris'}
+        # print(request.query_params)
+        q = request.query_params.get('q')              # q = request.query_params = request.GET
+        queryset = self.get_queryset()
+        queryset = queryset.filter(Q(title__icontains=q) |
+                                   Q(text__icontains=q))
+        serializer = PostSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class PostDetailView(generics.RetrieveAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-
-
-class PostUpdateView(generics.UpdateAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-
-
-class PostDeleteView(generics.DestroyAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-
-
-class PostImageView(generics.ListAPIView):
+class PostImageView(generics.ListCreateAPIView):
     queryset = PostImage.objects.all()
     serializer_class = PostImageSerializer
 
